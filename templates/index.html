@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section glass">
+    <div class="hero-content">
+        <h1>Master Your Academic Journey</h1>
+        <p>Streamline your schedule, conquer deadlines, and collaborate with peers - all in one beautiful platform designed for student success.</p>
+        <div class="hero-buttons">
+            <a href="{{ url_for('register') }}" class="btn btn-primary">
+                <i class="fas fa-rocket"></i>
+                Start Free Today
+            </a>
+            <a href="{{ url_for('login') }}" class="btn btn-secondary">
+                <i class="fas fa-sign-in-alt"></i>
+                Sign In
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features-section">
+    <h2>Everything You Need to Succeed</h2>
+    <div class="features-grid">
+        <div class="feature-card">
+            <i class="fas fa-calendar-alt"></i>
+            <h3>Smart Scheduling</h3>
+            <p>Create personalized 24/7 timetables that adapt to your college schedule and personal life.</p>
+        </div>
+        <div class="feature-card">
+            <i class="fas fa-tasks"></i>
+            <h3>Task Management</h3>
+            <p>Never miss a deadline with intelligent reminders and progress tracking.</p>
+        </div>
+        <div class="feature-card">
+            <i class="fas fa-share-alt"></i>
+            <h3>Resource Sharing</h3>
+            <p>Share notes, assignments, and study materials with your course community.</p>
+        </div>
+        <div class="feature-card">
+            <i class="fas fa-bell"></i>
+            <h3>Smart Notifications</h3>
+            <p>Get timely alerts for classes, assignments, and important updates.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Stats Section -->
+<section class="features-section" style="background: var(--gradient-primary); color: white;">
+    <div style="text-align: center;">
+        <h2 style="color: white; -webkit-text-fill-color: white; background: none;">Trusted by Students Worldwide</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; margin-top: 3rem;">
+            <div>
+                <h3 style="font-size: 3rem; font-weight: 800; margin-bottom: 0.5rem;">10K+</h3>
+                <p>Active Students</p>
+            </div>
+            <div>
+                <h3 style="font-size: 3rem; font-weight: 800; margin-bottom: 0.5rem;">50K+</h3>
+                <p>Tasks Managed</p>
+            </div>
+            <div>
+                <h3 style="font-size: 3rem; font-weight: 800; margin-bottom: 0.5rem;">5K+</h3>
+                <p>Resources Shared</p>
+            </div>
+            <div>
+                <h3 style="font-size: 3rem; font-weight: 800; margin-bottom: 0.5rem;">99%</h3>
+                <p>Success Rate</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Testimonial Section -->
+<section class="features-section">
+    <h2>What Students Are Saying</h2>
+    <div class="features-grid">
+        <div class="feature-card">
+            <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                <div style="width: 50px; height: 50px; background: var(--gradient-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 1rem;">AS</div>
+                <div>
+                    <h4 style="margin: 0;">Alex Smith</h4>
+                    <p style="color: var(--text-light); margin: 0;">Computer Science</p>
+                </div>
+            </div>
+            <p>"This platform transformed how I manage my time. My grades improved significantly!"</p>
+        </div>
+        <div class="feature-card">
+            <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                <div style="width: 50px; height: 50px; background: var(--gradient-secondary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 1rem;">SJ</div>
+                <div>
+                    <h4 style="margin: 0;">Sarah Johnson</h4>
+                    <p style="color: var(--text-light); margin: 0;">Mathematics</p>
+                </div>
+            </div>
+            <p>"The resource sharing feature helped our study group collaborate like never before."</p>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="hero-section glass" style="margin-top: 4rem;">
+    <div class="hero-content">
+        <h2>Ready to Transform Your Academic Life?</h2>
+        <p>Join thousands of students who are already achieving more with Schedule Planner.</p>
+        <div class="hero-buttons">
+            <a href="{{ url_for('register') }}" class="btn btn-primary" style="background: var(--gradient-secondary);">
+                <i class="fas fa-user-plus"></i>
+                Create Free Account
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}

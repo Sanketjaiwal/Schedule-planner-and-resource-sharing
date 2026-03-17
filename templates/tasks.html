@@ -1,0 +1,927 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-tasks"></i> My Tasks</h1>
+    <p>Manage your assignments and deadlines with smart tracking</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2><i class="fas fa-list-check"></i> My Tasks ({{ tasks|length }})</h2>
+        <div class="header-actions">
+            <button class="btn btn-primary" id="openTaskFormModal">
+                <i class="fas fa-plus"></i> Add New Task
+            </button>
+            <div class="task-filters">
+                <button class="btn btn-sm btn-outline active" data-filter="all">All</button>
+                <button class="btn btn-sm btn-outline" data-filter="pending">Pending</button>
+                <button class="btn btn-sm btn-outline" data-filter="completed">Completed</button>
+            </div>
+        </div>
+    </div>
+    
+    {% if tasks %}
+        <div class="tasks-list-container">
+            {% for task in tasks %}
+            <div class="task-list-item {% if task.completed %}completed{% else %}pending{% endif %}" data-status="{% if task.completed %}completed{% else %}pending{% endif %}">
+                <div class="task-main-content">
+                    <div class="task-header">
+                        <h3 class="task-title">{{ task.task_name }}</h3>
+                        <span class="task-type-badge">{{ task.task_type or 'General' }}</span>
+                    </div>
+                    
+                    <div class="task-progress-info">
+                        <div class="progress-status">
+                            <span class="status-indicator {% if task.completed %}completed{% else %}pending{% endif %}">
+                                <i class="fas {% if task.completed %}fa-check-circle{% else %}fa-clock{% endif %}"></i>
+                                {% if task.completed %}Completed{% else %}Pending{% endif %}
+                            </span>
+                            <span class="due-date-display {% if task.due_date < now and not task.completed %}overdue{% endif %}">
+                                <i class="fas fa-calendar"></i>
+                                {{ task.due_date.strftime('%d %b %Y, %H:%M') }}
+                            </span>
+                        </div>
+                        
+                        {% if not task.completed %}
+                        <div class="time-remaining">
+                            {% set time_remaining = task.due_date - now %}
+                            {% if time_remaining.days > 0 %}
+                                <span class="remaining-days">{{ time_remaining.days }} days left</span>
+                            {% elif time_remaining.days == 0 %}
+                                <span class="remaining-today">Due today</span>
+                            {% else %}
+                                <span class="remaining-overdue">Overdue by {{ -time_remaining.days }} days</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if task.description %}
+                    <div class="task-description">
+                        <p>{{ task.description }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="task-actions-panel">
+                    {% if not task.completed %}
+                    <button class="btn btn-success complete-task-btn" data-task-id="{{ task.id }}">
+                        <i class="fas fa-check"></i> Complete
+                    </button>
+                    {% else %}
+                    <div class="completed-badge">
+                        <i class="fas fa-check-circle"></i> Completed
+                    </div>
+                    {% endif %}
+                    
+                    <button class="btn btn-danger delete-task-btn" data-task-id="{{ task.id }}" data-task-name="{{ task.task_name }}">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Task Statistics -->
+        <div class="task-statistics">
+            {% set completed_tasks = tasks|selectattr("completed")|list %}
+            {% set pending_tasks = tasks|rejectattr("completed")|list %}
+            {% set overdue_tasks = pending_tasks|selectattr("due_date", "lt", now)|list %}
+            
+            <div class="stat-item">
+                <span class="stat-number">{{ tasks|length }}</span>
+                <span class="stat-label">Total Tasks</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">{{ completed_tasks|length }}</span>
+                <span class="stat-label">Completed</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">{{ pending_tasks|length }}</span>
+                <span class="stat-label">Pending</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">{{ overdue_tasks|length }}</span>
+                <span class="stat-label">Overdue</span>
+            </div>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="fas fa-tasks"></i>
+            <h3>No tasks yet</h3>
+            <p>Get started by adding your first task!</p>
+            <button class="btn btn-primary" id="openTaskFormModalEmpty">
+                <i class="fas fa-plus"></i> Add Your First Task
+            </button>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Add Task Form Modal -->
+<div id="taskFormModal" class="modal">
+    <div class="modal-content task-form-modal">
+        <div class="modal-header">
+            <h3><i class="fas fa-plus-circle"></i> Add New Task</h3>
+            <span class="close-modal" data-modal="taskFormModal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="taskForm" method="POST" action="{{ url_for('add_task') }}" class="form-grid">
+                <div class="form-group">
+                    <label for="task_name"><i class="fas fa-heading"></i> Task Name *</label>
+                    <input type="text" id="task_name" name="task_name" placeholder="Enter task name" required>
+                </div>
+                <div class="form-group">
+                    <label for="task_type"><i class="fas fa-tag"></i> Task Type *</label>
+                    <select id="task_type" name="task_type" required>
+                        <option value="">Select Task Type</option>
+                        <option value="Assignment">Assignment</option>
+                        <option value="Project">Project</option>
+                        <option value="Study">Study</option>
+                        <option value="Revision">Revision</option>
+                        <option value="Homework">Homework</option>
+                        <option value="Exam Preparation">Exam Preparation</option>
+                        <option value="Research">Research</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="due_date"><i class="fas fa-calendar-alt"></i> Due Date & Time *</label>
+                    <input type="datetime-local" id="due_date" name="due_date" required>
+                </div>
+                <div class="form-group full-width">
+                    <label for="description"><i class="fas fa-align-left"></i> Description</label>
+                    <textarea id="description" name="description" placeholder="Enter task description (optional)" rows="4"></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-actions">
+            <button type="submit" form="taskForm" class="btn btn-primary btn-large">
+                <i class="fas fa-plus"></i> Add Task
+            </button>
+            <button type="button" class="btn btn-secondary close-modal-btn" data-modal="taskFormModal">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div id="successModal" class="modal">
+    <div class="modal-content success-modal">
+        <div class="modal-header">
+            <h3><i class="fas fa-check-circle"></i> Success!</h3>
+        </div>
+        <div class="modal-body">
+            <p id="successMessage">Task has been added successfully!</p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-primary" onclick="closeSuccessModal()">OK</button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Header Actions */
+.header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+/* Task List Styles */
+.tasks-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.task-list-item {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1.5rem;
+}
+
+.task-list-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.task-list-item.completed {
+    border-left: 6px solid var(--secondary-color);
+    opacity: 0.8;
+    background: rgba(6, 214, 160, 0.05);
+}
+
+.task-list-item.pending {
+    border-left: 6px solid var(--primary-color);
+}
+
+.task-list-item.pending.overdue {
+    border-left: 6px solid var(--accent-color);
+    background: rgba(239, 71, 111, 0.05);
+}
+
+.task-main-content {
+    flex: 1;
+}
+
+.task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+
+.task-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin: 0;
+}
+
+.task-type-badge {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.task-progress-info {
+    margin-bottom: 1rem;
+}
+
+.progress-status {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+}
+
+.status-indicator.pending {
+    background: rgba(255, 209, 102, 0.2);
+    color: #e67e22;
+}
+
+.status-indicator.completed {
+    background: rgba(6, 214, 160, 0.2);
+    color: var(--secondary-color);
+}
+
+.due-date-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+.due-date-display.overdue {
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+.time-remaining {
+    margin-top: 0.5rem;
+}
+
+.remaining-days {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--primary-color);
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.remaining-today {
+    background: rgba(255, 209, 102, 0.2);
+    color: #e67e22;
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.remaining-overdue {
+    background: rgba(239, 71, 111, 0.2);
+    color: var(--accent-color);
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.task-description {
+    background: var(--bg-light);
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--border-color);
+}
+
+.task-description p {
+    margin: 0;
+    color: var(--text-light);
+    line-height: 1.5;
+}
+
+.task-actions-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 120px;
+}
+
+.complete-task-btn {
+    background: var(--secondary-color);
+    border: none;
+    color: white;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.complete-task-btn:hover {
+    background: #05b388;
+    transform: translateY(-2px);
+}
+
+.completed-badge {
+    background: rgba(6, 214, 160, 0.2);
+    color: var(--secondary-color);
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: center;
+    border: 2px solid var(--secondary-color);
+}
+
+.delete-task-btn {
+    background: transparent;
+    border: 2px solid var(--accent-color);
+    color: var(--accent-color);
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.delete-task-btn:hover {
+    background: var(--accent-color);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Task Filters */
+.task-filters {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 2px solid var(--border-color);
+    color: var(--text-light);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-outline.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.btn-outline:hover:not(.active) {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+/* Task Statistics */
+.task-statistics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid var(--border-color);
+}
+
+.stat-item {
+    text-align: center;
+    padding: 1rem;
+    background: var(--bg-light);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.stat-number {
+    display: block;
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: var(--text-light);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background-color: var(--card-bg);
+    margin: 5% auto;
+    padding: 0;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid var(--border-color);
+    animation: modalSlideIn 0.3s ease-out;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-content.task-form-modal {
+    max-width: 500px;
+}
+
+.modal-content.success-modal {
+    max-width: 400px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 2px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    background: var(--card-bg);
+    border-radius: 20px 20px 0 0;
+    z-index: 1;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.close-modal {
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+    color: var(--text-light);
+    transition: color 0.3s ease;
+}
+
+.close-modal:hover {
+    color: var(--accent-color);
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    padding: 1.5rem 2rem;
+    border-top: 2px solid var(--border-color);
+    position: sticky;
+    bottom: 0;
+    background: var(--card-bg);
+    border-radius: 0 0 20px 20px;
+}
+
+/* Form Styles in Modal */
+.task-form-modal .form-grid {
+    gap: 1.5rem;
+}
+
+.task-form-modal .form-group {
+    margin-bottom: 0;
+}
+
+.task-form-modal .form-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-dark);
+}
+
+.task-form-modal .form-group input,
+.task-form-modal .form-group select,
+.task-form-modal .form-group textarea {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: var(--input-bg);
+    color: var(--text-dark);
+    font-family: inherit;
+}
+
+.task-form-modal .form-group input:focus,
+.task-form-modal .form-group select:focus,
+.task-form-modal .form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.task-form-modal .form-group input::placeholder {
+    color: var(--text-light);
+}
+
+.task-form-modal textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-light);
+}
+
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    color: var(--border-color);
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--text-light);
+}
+
+.empty-state p {
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .header-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .task-filters {
+        justify-content: center;
+    }
+    
+    .task-list-item {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .task-actions-panel {
+        flex-direction: row;
+        justify-content: space-between;
+        width: 100%;
+    }
+    
+    .task-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .progress-status {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .task-statistics {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .modal-content {
+        margin: 2% auto;
+        width: 95%;
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
+    }
+    
+    .modal-actions {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .task-actions-panel {
+        flex-direction: column;
+    }
+    
+    .task-statistics {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-content {
+        margin: 1% auto;
+        width: 98%;
+    }
+    
+    .modal-header,
+    .modal-body,
+    .modal-actions {
+        padding: 1rem;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const taskFormModal = document.getElementById('taskFormModal');
+    const openTaskFormModalBtn = document.getElementById('openTaskFormModal');
+    const openTaskFormModalEmptyBtn = document.getElementById('openTaskFormModalEmpty');
+    const closeModalBtns = document.querySelectorAll('.close-modal');
+    const closeModalCustomBtns = document.querySelectorAll('.close-modal-btn');
+    const taskForm = document.getElementById('taskForm');
+    
+    // Set minimum datetime for due date
+    const dueDateInput = document.getElementById('due_date');
+    const now = new Date();
+    const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    dueDateInput.min = localDateTime;
+    
+    // Open add task modal from header button
+    if (openTaskFormModalBtn) {
+        openTaskFormModalBtn.addEventListener('click', function() {
+            openTaskFormModal();
+        });
+    }
+    
+    // Open add task modal from empty state button
+    if (openTaskFormModalEmptyBtn) {
+        openTaskFormModalEmptyBtn.addEventListener('click', function() {
+            openTaskFormModal();
+        });
+    }
+    
+    // Close modals
+    closeModalBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const modalId = this.getAttribute('data-modal');
+            document.getElementById(modalId).style.display = 'none';
+        });
+    });
+    
+    closeModalCustomBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const modalId = this.getAttribute('data-modal');
+            document.getElementById(modalId).style.display = 'none';
+        });
+    });
+    
+    // Task form submission
+    taskForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitTaskForm();
+    });
+    
+    // Close modals when clicking outside
+    window.addEventListener('click', function(e) {
+        if (e.target === taskFormModal) {
+            taskFormModal.style.display = 'none';
+        }
+        if (e.target === document.getElementById('successModal')) {
+            closeSuccessModal();
+        }
+    });
+    
+    // Complete task functionality
+    document.querySelectorAll('.complete-task-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const taskId = this.getAttribute('data-task-id');
+            completeTask(taskId, this);
+        });
+    });
+    
+    // Delete task functionality
+    document.querySelectorAll('.delete-task-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const taskId = this.getAttribute('data-task-id');
+            const taskName = this.getAttribute('data-task-name');
+            deleteTask(taskId, taskName);
+        });
+    });
+    
+    // Task filtering
+    document.querySelectorAll('.task-filters .btn-outline').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const filter = this.getAttribute('data-filter');
+            
+            // Update active button
+            document.querySelectorAll('.task-filters .btn-outline').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Filter tasks
+            document.querySelectorAll('.task-list-item').forEach(item => {
+                if (filter === 'all') {
+                    item.style.display = 'flex';
+                } else {
+                    const status = item.getAttribute('data-status');
+                    item.style.display = status === filter ? 'flex' : 'none';
+                }
+            });
+        });
+    });
+});
+
+function openTaskFormModal() {
+    // Reset form
+    document.getElementById('taskForm').reset();
+    
+    // Set default due date to tomorrow same time
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const localDateTime = new Date(tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    document.getElementById('due_date').value = localDateTime;
+    
+    // Show modal
+    document.getElementById('taskFormModal').style.display = 'block';
+    
+    // Focus on task name
+    setTimeout(() => {
+        document.getElementById('task_name').focus();
+    }, 300);
+}
+
+function submitTaskForm() {
+    const submitBtn = document.querySelector('#taskFormModal .btn-primary');
+    
+    // Show loading state
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding Task...';
+    submitBtn.disabled = true;
+    
+    // Submit form via AJAX
+    fetch(taskForm.action, {
+        method: 'POST',
+        body: new FormData(taskForm)
+    })
+    .then(response => {
+        if (response.ok) {
+            // Close the form modal
+            document.getElementById('taskFormModal').style.display = 'none';
+            // Show success modal
+            showSuccessModal('Task has been added successfully!');
+            // Reload page after a delay to show new task
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            alert('Error adding task. Please try again.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error adding task. Please try again.');
+    })
+    .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+function showSuccessModal(message) {
+    document.getElementById('successMessage').textContent = message;
+    document.getElementById('successModal').style.display = 'block';
+}
+
+function closeSuccessModal() {
+    document.getElementById('successModal').style.display = 'none';
+}
+
+function completeTask(taskId, button) {
+    if (confirm('Mark this task as completed?')) {
+        // Show loading state
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        button.disabled = true;
+        
+        fetch(`/complete_task/${taskId}`)
+            .then(response => {
+                if (response.ok) {
+                    showSuccessModal('Task marked as completed!');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    alert('Error completing task. Please try again.');
+                    button.innerHTML = '<i class="fas fa-check"></i> Complete';
+                    button.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error completing task. Please try again.');
+                button.innerHTML = '<i class="fas fa-check"></i> Complete';
+                button.disabled = false;
+            });
+    }
+}
+
+function deleteTask(taskId, taskName) {
+    if (confirm(`Are you sure you want to delete "${taskName}"? This action cannot be undone.`)) {
+        fetch(`/delete_task/${taskId}`)
+            .then(response => {
+                if (response.ok) {
+                    showSuccessModal('Task deleted successfully!');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    alert('Error deleting task. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error deleting task. Please try again.');
+            });
+    }
+}
+</script>
+{% endblock %}

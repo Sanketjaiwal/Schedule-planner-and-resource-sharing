@@ -1,0 +1,828 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="page-header">
+        <h1><i class="fas fa-share-alt"></i> Shared Resources</h1>
+        <p>Upload, view, and download study materials shared by your course mates ({{ session['user_course'] }})</p>
+    </div>
+
+    <!-- Search and Upload Section -->
+    <div class="card">
+        <div class="search-upload-header">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="resourceSearch" placeholder="Search resources by name, type, or description...">
+            </div>
+            <button class="btn btn-primary" id="openUploadModal">
+                <i class="fas fa-upload"></i> Upload Resource
+            </button>
+        </div>
+    </div>
+
+    <!-- Resources Grid -->
+    <div class="card">
+        <div class="card-header">
+            <h2><i class="fas fa-folder-open"></i> Course Resources ({{ session['user_course'] }})</h2>
+            <span class="resource-count">{{ resources|length }} resources</span>
+        </div>
+        
+        {% if resources %}
+            <div class="resources-grid" id="resourcesGrid">
+                {% for resource in resources %}
+                <div class="resource-card" data-resource-id="{{ resource.id }}" 
+                     data-name="{{ resource.resource_name.lower() }}"
+                     data-type="{{ resource.resource_type.lower() }}"
+                     data-description="{{ resource.description.lower() }}">
+                    <div class="resource-icon">
+                        {% if resource.file_name.endswith('.pdf') %}
+                            <i class="fas fa-file-pdf"></i>
+                        {% elif resource.file_name.endswith('.doc') or resource.file_name.endswith('.docx') %}
+                            <i class="fas fa-file-word"></i>
+                        {% elif resource.file_name.endswith('.jpg') or resource.file_name.endswith('.jpeg') or resource.file_name.endswith('.png') %}
+                            <i class="fas fa-file-image"></i>
+                        {% elif resource.file_name.endswith('.txt') %}
+                            <i class="fas fa-file-alt"></i>
+                        {% else %}
+                            <i class="fas fa-file"></i>
+                        {% endif %}
+                    </div>
+                    <div class="resource-content">
+                        <h3 class="resource-title">{{ resource.resource_name }}</h3>
+                        <div class="resource-meta">
+                            <span class="resource-type" data-type="{{ resource.resource_type }}">{{ resource.resource_type }}</span>
+                            <span class="resource-size">{{ resource.file_size }}</span>
+                        </div>
+                        <p class="resource-description">{{ resource.description[:100] }}{% if resource.description|length > 100 %}...{% endif %}</p>
+                        <div class="resource-footer">
+                            <span class="uploader">By: {{ resource.uploader_name }}</span>
+                            <span class="upload-date">{{ resource.uploaded_at.strftime('%d %b %Y') }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div id="noResults" class="empty-state" style="display: none;">
+                <i class="fas fa-search"></i>
+                <h3>No resources found</h3>
+                <p>Try adjusting your search terms</p>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-share-alt"></i>
+                <h3>No resources shared yet</h3>
+                <p>Be the first to share study materials for your course!</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Upload Resource Modal (Reduced by 15%) -->
+<div id="uploadModal" class="modal">
+    <div class="modal-content upload-modal">
+        <div class="modal-header">
+            <h3><i class="fas fa-upload"></i> Upload New Resource</h3>
+            <span class="close-modal" data-modal="uploadModal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form method="POST" action="{{ url_for('upload_resource') }}" enctype="multipart/form-data" class="form-grid" id="uploadForm">
+                <div class="form-group">
+                    <label for="resource_name"><i class="fas fa-heading"></i> Resource Name</label>
+                    <input type="text" id="resource_name" name="resource_name" required placeholder="Enter resource name">
+                </div>
+                <div class="form-group">
+                    <label for="resource_type"><i class="fas fa-tag"></i> Resource Type</label>
+                    <select id="resource_type" name="resource_type" required>
+                        <option value="">Select Type</option>
+                        <option value="Notes">Notes</option>
+                        <option value="Assignment">Assignment</option>
+                        <option value="Book">Book</option>
+                        <option value="Slide">Slide</option>
+                        <option value="Question Paper">Question Paper</option>
+                        <option value="Solution">Solution</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="course_related"><i class="fas fa-book"></i> Related Course</label>
+                    <select id="course_related" name="course_related" required>
+                        <option value="">Select Course</option>
+                       <option value="9th">9th</option>
+                    <option value="10th">10th</option>
+                    <option value="11th">11th</option>
+                    <option value="12th">12th</option>
+                    <option value="NEET">NEET</option>
+                    <option value="JEE">JEE</option>
+                    <option value="polytechnic">polytechnic</option>
+                    <option value="Engineering">Engineering</option>
+                    <option value="ITI">ITI</option>
+                    <option value="CA">CA</option>
+                    <option value="MBA/BBA">MBA/BBA</option>
+                    <option value="BSC/MSC">MSC/BSC</option>
+                    <option value="Medical">Medical</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="file"><i class="fas fa-file"></i> Select File</label>
+                    <input type="file" id="file" name="file" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png" required>
+                    <small class="field-note">Allowed formats: PDF, DOC, DOCX, TXT, JPG, JPEG, PNG (Max 10MB)</small>
+                </div>
+                <div class="form-group full-width">
+                    <label for="description"><i class="fas fa-align-left"></i> Description</label>
+                    <textarea id="description" name="description" rows="3" placeholder="Describe this resource..."></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-actions">
+            <button type="submit" form="uploadForm" class="btn btn-primary btn-large">
+                <i class="fas fa-upload"></i> Upload Resource
+            </button>
+            <button type="button" class="btn btn-secondary close-modal-btn" data-modal="uploadModal">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Resource Info Modal (Reduced by 15%) -->
+<div id="resourceModal" class="modal">
+    <div class="modal-content resource-info-modal">
+        <div class="modal-header">
+            <h3><i class="fas fa-info-circle"></i> Resource Details</h3>
+            <span class="close-modal" data-modal="resourceModal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="resource-details">
+                <div class="detail-row">
+                    <label>Resource Name:</label>
+                    <span id="modal-resource-name"></span>
+                </div>
+                <div class="detail-row">
+                    <label>File Name:</label>
+                    <span id="modal-file-name"></span>
+                </div>
+                <div class="detail-row">
+                    <label>Type:</label>
+                    <span id="modal-resource-type"></span>
+                </div>
+                <div class="detail-row">
+                    <label>Size:</label>
+                    <span id="modal-file-size"></span>
+                </div>
+                <div class="detail-row">
+                    <label>Course:</label>
+                    <span id="modal-course-related"></span>
+                </div>
+                <div class="detail-row">
+                    <label>Uploaded By:</label>
+                    <span id="modal-uploader-name"></span>
+                </div>
+                <div class="detail-row">
+                    <label>Upload Date:</label>
+                    <span id="modal-upload-date"></span>
+                </div>
+                <div class="detail-row full-width">
+                    <label>Description:</label>
+                    <p id="modal-description"></p>
+                </div>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button id="viewResource" class="btn btn-primary">
+                <i class="fas fa-eye"></i> View File
+            </button>
+            <button id="downloadResource" class="btn btn-secondary">
+                <i class="fas fa-download"></i> Download
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Search and Upload Header */
+.search-upload-header {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.search-box {
+    position: relative;
+    flex: 1;
+    min-width: 300px;
+    max-width: 500px;
+}
+
+.search-box i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-light);
+    z-index: 1;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 3rem;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 0.9rem;
+    background: var(--input-bg);
+    color: var(--text-dark);
+    transition: all 0.3s ease;
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.search-box input::placeholder {
+    color: var(--text-light);
+}
+
+/* Resources Grid */
+.resources-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.resource-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.resource-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-color);
+}
+
+.resource-card.hidden {
+    display: none;
+}
+
+.resource-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.resource-card .fa-file-pdf { color: #e74c3c; }
+.resource-card .fa-file-word { color: #2b579a; }
+.resource-card .fa-file-image { color: #e67e22; }
+.resource-card .fa-file-alt { color: #7f8c8d; }
+.resource-card .fa-file { color: var(--primary-color); }
+
+.resource-content {
+    flex: 1;
+}
+
+.resource-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--text-dark);
+    line-height: 1.4;
+}
+
+.resource-meta {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.resource-type {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.3rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.resource-size {
+    background: var(--bg-light);
+    color: var(--text-light);
+    padding: 0.3rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+}
+
+.resource-description {
+    color: var(--text-light);
+    line-height: 1.5;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.resource-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+.uploader {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.resource-count {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+}
+
+.modal-content.upload-modal {
+    background-color: var(--card-bg);
+    margin: 3% auto; /* Changed from 8% to 3% to move 10% higher (8% - 5% = 3%) */
+    padding: 0;
+    border-radius: 20px;
+    width: 76.5%; /* 90% * 0.85 = 76.5% */
+    max-width: 510px; /* 600px * 0.85 = 510px */
+    box-shadow: var(--shadow-xl);
+    border: 1px solid var(--border-color);
+    animation: modalSlideIn 0.3s ease-out;
+    transform: scale(0.85); /* Additional scaling for content */
+    transform-origin: center;
+    position: relative;
+    top: -5%; /* Additional offset to move higher */
+}
+.modal-content.resource-info-modal {
+    background-color: var(--card-bg);
+    margin: 8% auto; /* Keep original position */
+    padding: 0;
+    border-radius: 20px;
+    width: 76.5%; /* 90% * 0.85 = 76.5% */
+    max-width: 510px; /* 600px * 0.85 = 510px */
+    box-shadow: var(--shadow-xl);
+    border: 1px solid var(--border-color);
+    animation: modalSlideIn 0.3s ease-out;
+    transform: scale(0.85); /* Additional scaling for content */
+    transform-origin: center;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.close-modal {
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+    color: var(--text-light);
+    transition: color 0.3s ease;
+}
+
+.close-modal:hover {
+    color: var(--accent-color);
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+/* Reduced padding for both modals */
+.upload-modal .modal-body,
+.resource-info-modal .modal-body {
+    padding: 1.5rem; /* Reduced from 2rem */
+}
+
+.resource-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem; /* Reduced from 1rem */
+}
+
+.detail-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem; /* Reduced from 1rem */
+}
+
+.detail-row.full-width {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.detail-row label {
+    font-weight: 600;
+    color: var(--text-dark);
+    min-width: 100px; /* Reduced from 120px */
+    font-size: 0.9rem; /* Slightly smaller */
+}
+
+.detail-row span, .detail-row p {
+    color: var(--text-light);
+    flex: 1;
+    font-size: 0.9rem; /* Slightly smaller */
+}
+
+.detail-row p {
+    margin: 0;
+    line-height: 1.4; /* Reduced from 1.5 */
+    background: var(--bg-light);
+    padding: 0.75rem; /* Reduced from 1rem */
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
+    font-size: 0.85rem; /* Smaller for description */
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    padding: 1.5rem 2rem;
+    border-top: 2px solid var(--border-color);
+}
+
+/* Reduced padding for both modals actions */
+.upload-modal .modal-actions,
+.resource-info-modal .modal-actions {
+    padding: 1rem 1.5rem; /* Reduced padding */
+}
+
+/* File type colors */
+.resource-type[data-type="Notes"] { background: #3498db; }
+.resource-type[data-type="Assignment"] { background: #e74c3c; }
+.resource-type[data-type="Book"] { background: #27ae60; }
+.resource-type[data-type="Slide"] { background: #9b59b6; }
+.resource-type[data-type="Question Paper"] { background: #f39c12; }
+.resource-type[data-type="Solution"] { background: #1abc9c; }
+.resource-type[data-type="Other"] { background: #7f8c8d; }
+
+/* Form adjustments for upload modal */
+.upload-modal .form-grid {
+    gap: 1rem; /* Reduced gap */
+}
+
+.upload-modal .form-group {
+    margin-bottom: 1rem; /* Reduced from 1.75rem */
+}
+
+.upload-modal .form-group label {
+    font-size: 0.9rem; /* Slightly smaller */
+    margin-bottom: 0.5rem; /* Reduced */
+}
+
+.upload-modal .form-group input,
+.upload-modal .form-group select,
+.upload-modal .form-group textarea {
+    padding: 0.75rem 1rem; /* Reduced padding */
+    font-size: 0.9rem; /* Slightly smaller */
+}
+
+/* Search highlight */
+.search-highlight {
+    background-color: rgba(255, 235, 59, 0.3);
+    padding: 0.1rem 0.2rem;
+    border-radius: 3px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .search-upload-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .search-box {
+        min-width: auto;
+        max-width: none;
+    }
+    
+    .resources-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-content.upload-modal,
+    .modal-content.resource-info-modal {
+        width: 95%;
+        margin: 10% auto;
+        max-width: none;
+        transform: scale(1); /* Remove scaling on mobile */
+    }
+    
+    .modal-header,
+    .modal-body,
+    .modal-actions {
+        padding: 1rem;
+    }
+    
+    .upload-modal .modal-body,
+    .resource-info-modal .modal-body {
+        padding: 1rem;
+    }
+    
+    .detail-row {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .detail-row label {
+        min-width: auto;
+    }
+    
+    .modal-actions {
+        flex-direction: column;
+    }
+    
+    .upload-modal .modal-actions {
+        flex-direction: column-reverse;
+    }
+}
+
+/* Empty state for search results */
+.empty-state#noResults {
+    display: none;
+}
+
+.empty-state#noResults.show {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 3rem 2rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadModal = document.getElementById('uploadModal');
+    const resourceModal = document.getElementById('resourceModal');
+    const openUploadModalBtn = document.getElementById('openUploadModal');
+    const closeModalBtns = document.querySelectorAll('.close-modal');
+    const closeModalCustomBtns = document.querySelectorAll('.close-modal-btn');
+    const resourceCards = document.querySelectorAll('.resource-card');
+    const resourceSearch = document.getElementById('resourceSearch');
+    const resourcesGrid = document.getElementById('resourcesGrid');
+    const noResults = document.getElementById('noResults');
+    let currentResourceId = null;
+
+    // Open upload modal
+    openUploadModalBtn.addEventListener('click', function() {
+        uploadModal.style.display = 'block';
+        document.getElementById('uploadForm').reset();
+    });
+
+    // Open resource info modal when resource card is clicked
+    resourceCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const resourceId = this.getAttribute('data-resource-id');
+            openResourceModal(resourceId);
+        });
+    });
+
+    // Close modals
+    closeModalBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const modalId = this.getAttribute('data-modal');
+            document.getElementById(modalId).style.display = 'none';
+        });
+    });
+
+    closeModalCustomBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const modalId = this.getAttribute('data-modal');
+            document.getElementById(modalId).style.display = 'none';
+        });
+    });
+
+    // Close modals when clicking outside
+    window.addEventListener('click', function(e) {
+        if (e.target === uploadModal) {
+            uploadModal.style.display = 'none';
+        }
+        if (e.target === resourceModal) {
+            resourceModal.style.display = 'none';
+        }
+    });
+
+    // View resource
+    document.getElementById('viewResource').addEventListener('click', function() {
+        if (currentResourceId) {
+            window.open(`/view_resource/${currentResourceId}`, '_blank');
+        }
+    });
+
+    // Download resource
+    document.getElementById('downloadResource').addEventListener('click', function() {
+        if (currentResourceId) {
+            window.location.href = `/download_resource/${currentResourceId}`;
+        }
+    });
+
+    // Handle form submission success
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        // Form will be submitted normally, the modal will close on redirect
+        setTimeout(() => {
+            uploadModal.style.display = 'none';
+        }, 100);
+    });
+
+    // Search functionality
+    resourceSearch.addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        filterResources(searchTerm);
+    });
+
+    function filterResources(searchTerm) {
+        let visibleCount = 0;
+        
+        resourceCards.forEach(card => {
+            const name = card.getAttribute('data-name');
+            const type = card.getAttribute('data-type');
+            const description = card.getAttribute('data-description');
+            
+            if (searchTerm === '') {
+                card.classList.remove('hidden');
+                visibleCount++;
+            } else {
+                const matches = name.includes(searchTerm) || 
+                              type.includes(searchTerm) || 
+                              description.includes(searchTerm);
+                
+                if (matches) {
+                    card.classList.remove('hidden');
+                    visibleCount++;
+                    
+                    // Highlight search term in title
+                    highlightSearchTerm(card, searchTerm);
+                } else {
+                    card.classList.add('hidden');
+                }
+            }
+        });
+        
+        // Show/hide no results message
+        if (visibleCount === 0 && searchTerm !== '') {
+            noResults.classList.add('show');
+            resourcesGrid.style.display = 'none';
+        } else {
+            noResults.classList.remove('show');
+            resourcesGrid.style.display = 'grid';
+        }
+        
+        // Update resource count
+        updateResourceCount(visibleCount);
+    }
+    
+    function highlightSearchTerm(card, searchTerm) {
+        const titleElement = card.querySelector('.resource-title');
+        const descriptionElement = card.querySelector('.resource-description');
+        
+        // Remove existing highlights
+        titleElement.innerHTML = titleElement.textContent;
+        descriptionElement.innerHTML = descriptionElement.textContent;
+        
+        if (searchTerm) {
+            // Highlight in title
+            const titleText = titleElement.textContent;
+            const highlightedTitle = titleText.replace(
+                new RegExp(searchTerm, 'gi'),
+                match => `<span class="search-highlight">${match}</span>`
+            );
+            titleElement.innerHTML = highlightedTitle;
+            
+            // Highlight in description
+            const descText = descriptionElement.textContent;
+            const highlightedDesc = descText.replace(
+                new RegExp(searchTerm, 'gi'),
+                match => `<span class="search-highlight">${match}</span>`
+            );
+            descriptionElement.innerHTML = highlightedDesc;
+        }
+    }
+    
+    function updateResourceCount(count) {
+        const countElement = document.querySelector('.resource-count');
+        const searchTerm = resourceSearch.value.trim();
+        
+        if (searchTerm === '') {
+            countElement.textContent = `${count} resources`;
+        } else {
+            countElement.textContent = `${count} of {{ resources|length }} resources`;
+        }
+    }
+
+    function openResourceModal(resourceId) {
+        currentResourceId = resourceId;
+        
+        // Show loading state
+        document.getElementById('modal-resource-name').textContent = 'Loading...';
+        
+        // Fetch resource details
+        fetch(`/get_resource_info/${resourceId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Error loading resource details: ' + data.error);
+                    return;
+                }
+
+                // Populate modal with resource data
+                document.getElementById('modal-resource-name').textContent = data.resource_name;
+                document.getElementById('modal-file-name').textContent = data.file_name;
+                document.getElementById('modal-resource-type').textContent = data.resource_type;
+                document.getElementById('modal-file-size').textContent = data.file_size;
+                document.getElementById('modal-course-related').textContent = data.course_related;
+                document.getElementById('modal-uploader-name').textContent = data.uploader_name;
+                document.getElementById('modal-upload-date').textContent = data.uploaded_at;
+                document.getElementById('modal-description').textContent = data.description || 'No description provided.';
+
+                // Show modal
+                resourceModal.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error fetching resource details:', error);
+                alert('Error loading resource details');
+            });
+    }
+
+    // Add file type colors
+    document.querySelectorAll('.resource-type').forEach(type => {
+        const typeText = type.textContent;
+        type.setAttribute('data-type', typeText);
+    });
+
+    // File size validation
+    document.getElementById('file').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const fileSize = file.size;
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            
+            if (fileSize > maxSize) {
+                alert('File size must be less than 10MB');
+                e.target.value = '';
+            }
+        }
+    });
+
+    // Clear search on escape key
+    resourceSearch.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            this.value = '';
+            filterResources('');
+        }
+    });
+});
+</script>
+{% endblock %}

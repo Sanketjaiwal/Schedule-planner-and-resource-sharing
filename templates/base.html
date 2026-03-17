@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" class="{{ theme_class }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule Planner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-logo">
+                <i class="fas fa-calendar-alt"></i>
+                Schedule Planner
+            </h1>
+            <div class="nav-links">
+                {% if 'user_id' in session %}
+                    <span class="welcome-text">Welcome, {{ session['user_name'] }}</span>
+                    <a href="{{ url_for('dashboard') }}"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                    <a href="{{ url_for('timetable') }}"><i class="fas fa-clock"></i> Timetable</a>
+                    <a href="{{ url_for('tasks') }}"><i class="fas fa-tasks"></i> Tasks</a>
+                    <a href="{{ url_for('resources') }}"><i class="fas fa-share-alt"></i> Resources</a>
+                    <!--<a href="{{ url_for('update_profile') }}"><i class="fas fa-user-cog"></i> Settings</a>-->
+                    <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                {% else %}
+                    <a href="{{ url_for('home') }}"><i class="fas fa-home"></i> Home</a>
+                    <a href="{{ url_for('login') }}"><i class="fas fa-sign-in-alt"></i> Login</a>
+                    <a href="{{ url_for('register') }}"><i class="fas fa-user-plus"></i> Register</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

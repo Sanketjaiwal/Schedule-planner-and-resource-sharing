@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="page-header">
+        <h1><i class="fas fa-user-edit"></i> Update Profile</h1>
+        <p>Manage your personal and educational information</p>
+    </div>
+
+    <div class="profile-management">
+        <!-- Personal Information Section -->
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-user"></i> Personal Information</h2>
+            </div>
+            <form method="POST" action="{{ url_for('update_profile') }}" class="profile-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="name"><i class="fas fa-signature"></i> Full Name</label>
+                        <input type="text" id="name" name="name" value="{{ user_data.name or '' }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email"><i class="fas fa-envelope"></i> Email</label>
+                        <input type="email" id="email" value="{{ user_data.email or '' }}" disabled class="disabled-field">
+                        <small class="field-note">Email cannot be changed</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone_number"><i class="fas fa-phone"></i> Phone Number</label>
+                        <input type="tel" id="phone_number" name="phone_number" value="{{ user_data.phone_number or '' }}" placeholder="Enter your phone number">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="address"><i class="fas fa-map-marker-alt"></i> Address</label>
+                        <textarea id="address" name="address" rows="3" placeholder="Enter your complete address">{{ user_data.address or '' }}</textarea>
+                    </div>
+                </div>
+
+                <!-- Educational Information -->
+                <div class="form-section">
+                    <h3><i class="fas fa-graduation-cap"></i> Educational Information</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="course"><i class="fas fa-book"></i> Course/Program</label>
+                            <input type="text" id="course" name="course" value="{{ user_data.course or '' }}" required placeholder="e.g., Computer Science">
+                        </div>
+                        <div class="form-group">
+                            <label for="semester"><i class="fas fa-calendar-alt"></i> Semester</label>
+                            <input type="text" id="semester" name="semester" value="{{ user_data.semester or '' }}" placeholder="e.g., 3rd Semester">
+                        </div>
+                        <div class="form-group">
+                            <label for="academic_year"><i class="fas fa-calendar"></i> Academic Year</label>
+                            <input type="text" id="academic_year" name="academic_year" value="{{ user_data.academic_year or '' }}" placeholder="e.g., 2024-2025">
+                        </div>
+                        <div class="form-group">
+                            <label for="roll_number"><i class="fas fa-id-card"></i> Roll Number</label>
+                            <input type="text" id="roll_number" name="roll_number" value="{{ user_data.roll_number or '' }}" placeholder="Enter your roll number">
+                        </div>
+                        <div class="form-group">
+                            <label for="school_name"><i class="fas fa-school"></i> School/College Name</label>
+                            <input type="text" id="school_name" name="school_name" value="{{ user_data.school_name or '' }}" placeholder="Enter your school/college name">
+                        </div>
+                        <div class="form-group">
+                            <label for="university"><i class="fas fa-university"></i> University</label>
+                            <input type="text" id="university" name="university" value="{{ user_data.university or '' }}" placeholder="Enter your university name">
+                        </div>
+                        <div class="form-group">
+                            <label for="state"><i class="fas fa-map"></i> State</label>
+                            <input type="text" id="state" name="state" value="{{ user_data.state or '' }}" placeholder="Enter your state">
+                        </div>
+                        <div class="form-group">
+                            <label for="district"><i class="fas fa-map-pin"></i> District</label>
+                            <input type="text" id="district" name="district" value="{{ user_data.district or '' }}" placeholder="Enter your district">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-large">
+                        <i class="fas fa-save"></i>
+                        Update Profile
+                    </button>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i>
+                        Back to Dashboard
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Security & Preferences Section -->
+        <div class="security-preferences">
+            <!-- Change Password -->
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-lock"></i> Change Password</h2>
+                </div>
+                <form method="POST" action="{{ url_for('change_password') }}" class="password-form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="current_password"><i class="fas fa-key"></i> Current Password</label>
+                            <input type="password" id="current_password" name="current_password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="new_password"><i class="fas fa-key"></i> New Password</label>
+                            <input type="password" id="new_password" name="new_password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirm_password"><i class="fas fa-key"></i> Confirm New Password</label>
+                            <input type="password" id="confirm_password" name="confirm_password" required>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-key"></i>
+                            Change Password
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Change Theme -->
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-palette"></i> Theme Preferences</h2>
+                </div>
+                <form method="POST" action="{{ url_for('change_theme') }}" class="theme-form">
+                    <div class="form-group">
+                        <label for="theme"><i class="fas fa-paint-brush"></i> Select Theme</label>
+                        <select id="theme" name="theme" class="theme-select">
+                            <option value="light" {% if user_data.theme == 'light' %}selected{% endif %}>🌞 Light Mode</option>
+                            <option value="dark" {% if user_data.theme == 'dark' %}selected{% endif %}>🌙 Dark Mode</option>
+                            <option value="auto" {% if user_data.theme == 'auto' or not user_data.theme %}selected{% endif %}>⚙️ Auto (System)</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            Save Theme
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.profile-management {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+}
+
+.security-preferences {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.disabled-field {
+    background-color: var(--bg-light);
+    color: var(--text-light);
+    cursor: not-allowed;
+}
+
+.field-note {
+    color: var(--text-light);
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    display: block;
+}
+
+.theme-select {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 1rem;
+    background: var(--bg-light);
+}
+
+.password-form,
+.theme-form {
+    margin-top: 1rem;
+}
+
+@media (max-width: 1024px) {
+    .profile-management {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-save theme preference when changed
+    const themeSelect = document.getElementById('theme');
+    if (themeSelect) {
+        themeSelect.addEventListener('change', function() {
+            // You can add auto-save functionality here if needed
+        });
+    }
+
+    // Password strength indicator
+    const newPassword = document.getElementById('new_password');
+    const confirmPassword = document.getElementById('confirm_password');
+    
+    if (newPassword && confirmPassword) {
+        newPassword.addEventListener('input', validatePassword);
+        confirmPassword.addEventListener('input', validatePassword);
+    }
+
+    function validatePassword() {
+        if (newPassword.value && confirmPassword.value) {
+            if (newPassword.value !== confirmPassword.value) {
+                confirmPassword.style.borderColor = 'var(--accent-color)';
+            } else {
+                confirmPassword.style.borderColor = 'var(--secondary-color)';
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,716 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Welcome Header with Stats (Reduced to 70%) -->
+    <div class="dashboard-header reduced-size">
+        <div class="header-main">
+            <div class="welcome-section">
+                <h1 class="date-title" id="current-date">Loading...</h1>
+                <div class="user-welcome">
+                    <h2>Welcome back, {{ session['user_name'] }}! 👋</h2>
+                    <p>Here's your academic overview for today</p>
+                </div>
+            </div>
+            <!--
+            <div class="header-actions">
+                <a href="{{ url_for('update_profile') }}" class="btn btn-primary">
+                    <i class="fas fa-user-edit"></i>
+                    Edit Profile
+                </a>
+            </div>
+            -->
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <i class="fas fa-tasks"></i>
+                <div class="stat-info">
+                    <h3>Pending Tasks</h3>
+                    <span class="stat-number">
+                        {% set pending_tasks = [] %}
+                        {% for task in recent_tasks %}
+                            {% if not task.completed %}
+                                {% set _ = pending_tasks.append(1) %}
+                            {% endif %}
+                        {% endfor %}
+                        {{ pending_tasks|length }}
+                    </span>
+                    <span class="stat-label">Tasks to complete</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-clock"></i>
+                <div class="stat-info">
+                    <h3>Today's Classes</h3>
+                    <span class="stat-number">{{ today_schedule|length }}</span>
+                    <span class="stat-label">Scheduled sessions</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-calendar-check"></i>
+                <div class="stat-info">
+                    <h3>This Week</h3>
+                    <span class="stat-number">{{ weekly_tasks_count }}</span>
+                    <span class="stat-label">Total tasks</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-graduation-cap"></i>
+                <div class="stat-info">
+                    <h3>Course</h3>
+                    <span class="stat-text">{{ session['user_course'] }}</span>
+                    <span class="stat-label">Current program</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="dashboard-grid">
+        <!-- Left Column - Tasks & Schedule -->
+        <div class="dashboard-column">
+            <!-- Today's Tasks -->
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-tasks"></i> Today's Tasks</h2>
+                    <a href="{{ url_for('tasks') }}" class="btn btn-sm btn-secondary">
+                        View All
+                    </a>
+                </div>
+                {% if recent_tasks %}
+                    <div class="tasks-list">
+                        {% for task in recent_tasks %}
+                            {% if task.due_date.strftime('%Y-%m-%d') == now.strftime('%Y-%m-%d') %}
+                            <div class="task-item {% if task.completed %}completed{% endif %}">
+                                <div class="task-checkbox">
+                                    <a href="{{ url_for('complete_task', task_id=task.id) }}" class="checkbox {% if task.completed %}checked{% endif %}">
+                                        <i class="fas fa-check"></i>
+                                    </a>
+                                </div>
+                                <div class="task-info">
+                                    <h4>{{ task.task_name }}</h4>
+                                    {% if task.description %}
+                                    <p class="task-description">{{ task.description }}</p>
+                                    {% endif %}
+                                    <div class="task-meta">
+                                        <span class="due-date {% if task.due_date < now %}overdue{% endif %}">
+                                            <i class="fas fa-clock"></i>
+                                            Due: {{ task.due_date.strftime('%H:%M') }}
+                                        </span>
+                                        <span class="task-status {% if task.completed %}completed{% else %}pending{% endif %}">
+                                            {% if task.completed %}Completed{% else %}Pending{% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="task-actions">
+                                    <a href="{{ url_for('delete_task', task_id=task.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-check-circle"></i>
+                        <h3>No tasks for today</h3>
+                        <p>You're all caught up! Enjoy your day.</p>
+                    </div>
+                {% endif %}
+                <div class="card-footer">
+                    <a href="{{ url_for('tasks') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        Add New Task
+                    </a>
+                </div>
+            </div>
+
+            <!-- Upcoming Schedule -->
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-calendar-day"></i> Today's Schedule</h2>
+                    <a href="{{ url_for('timetable') }}" class="btn btn-sm btn-secondary">
+                        Full Schedule
+                    </a>
+                </div>
+                {% if today_schedule %}
+                    <div class="schedule-list">
+                        {% for entry in today_schedule %}
+                        <div class="schedule-item {{ entry.activity_type }}-activity">
+                            <div class="schedule-time">
+                                <span class="time-start">{{ entry.start_time.strftime('%H:%M') }}</span>
+                                <span class="time-end">{{ entry.end_time.strftime('%H:%M') }}</span>
+                            </div>
+                            <div class="schedule-details">
+                                <h4>{{ entry.description }}</h4>
+                                {% if entry.subject %}
+                                <span class="schedule-subject">{{ entry.subject }}</span>
+                                {% endif %}
+                                <span class="schedule-type {{ entry.activity_type }}">
+                                    {{ entry.activity_type|title }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-calendar-times"></i>
+                        <h3>No classes scheduled</h3>
+                        <p>Enjoy your free time or add some activities!</p>
+                    </div>
+                {% endif %}
+                <div class="card-footer">
+                    <a href="{{ url_for('timetable') }}" class="btn btn-secondary">
+                        <i class="fas fa-plus"></i>
+                        Add Schedule Item
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Profile & Resources -->
+        <div class="dashboard-column">
+            <!-- User Profile Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-user-graduate"></i> Student Profile</h2>
+                    <a href="{{ url_for('update_profile') }}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    
+                </div>
+                <div class="profile-info">
+                    <div class="profile-avatar">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <div class="profile-details">
+                        <h3>{{ session['user_name'] }}</h3>
+                        <p class="profile-course">{{ session['user_course'] }}</p>
+                        <div class="profile-meta">
+                            <div class="meta-item">
+                                <i class="fas fa-envelope"></i>
+                                <span>{{ session['user_email'] }}</span>
+                            </div>
+                            {% if user_data.roll_number %}
+                            <div class="meta-item">
+                                <i class="fas fa-id-card"></i>
+                                <span>Roll No: {{ user_data.roll_number }}</span>
+                            </div>
+                            {% endif %}
+                            {% if user_data.semester %}
+                            <div class="meta-item">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>Semester: {{ user_data.semester }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                {% if user_data.school_name or user_data.university %}
+                <div class="education-info">
+                    <h4>Education Details</h4>
+                    <div class="education-grid">
+                        {% if user_data.school_name %}
+                        <div class="edu-item">
+                            <i class="fas fa-school"></i>
+                            <div>
+                                <strong>School/College</strong>
+                                <span>{{ user_data.school_name }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if user_data.university %}
+                        <div class="edu-item">
+                            <i class="fas fa-university"></i>
+                            <div>
+                                <strong>University</strong>
+                                <span>{{ user_data.university }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if user_data.academic_year %}
+                        <div class="edu-item">
+                            <i class="fas fa-calendar"></i>
+                            <div>
+                                <strong>Academic Year</strong>
+                                <span>{{ user_data.academic_year }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- My Uploaded Resources Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-cloud-upload-alt"></i> My Uploaded Resources</h2>
+                    <a href="{{ url_for('resources') }}" class="btn btn-sm btn-secondary">
+                        View All
+                    </a>
+                </div>
+                
+                {% if user_resources %}
+                    <div class="uploaded-resources-list">
+                        {% for resource in user_resources %}
+                        <div class="uploaded-resource-item" id="resource-{{ resource.id }}">
+                            <div class="resource-mini-icon">
+                                {% if resource.file_name.endswith('.pdf') %}
+                                    <i class="fas fa-file-pdf"></i>
+                                {% elif resource.file_name.endswith('.doc') or resource.file_name.endswith('.docx') %}
+                                    <i class="fas fa-file-word"></i>
+                                {% elif resource.file_name.endswith('.jpg') or resource.file_name.endswith('.jpeg') or resource.file_name.endswith('.png') %}
+                                    <i class="fas fa-file-image"></i>
+                                {% elif resource.file_name.endswith('.txt') %}
+                                    <i class="fas fa-file-alt"></i>
+                                {% else %}
+                                    <i class="fas fa-file"></i>
+                                {% endif %}
+                            </div>
+                            <div class="resource-mini-info" onclick="openResourceModal({{ resource.id }})">
+                                <h4>{{ resource.resource_name }}</h4>
+                                <div class="resource-mini-meta">
+                                    <span class="resource-mini-type" data-type="{{ resource.resource_type }}">{{ resource.resource_type }}</span>
+                                    <span class="resource-mini-size">{{ resource.file_size }}</span>
+                                    <span class="resource-mini-date">{{ resource.uploaded_at.strftime('%d %b') }}</span>
+                                </div>
+                            </div>
+                            <div class="resource-mini-actions">
+                                <!-- Replaced Download with View Button -->
+                                <button class="btn btn-sm btn-primary view-resource" 
+                                        data-resource-id="{{ resource.id }}"
+                                        title="View Resource">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger delete-resource-dashboard" 
+                                        data-resource-id="{{ resource.id }}"
+                                        data-resource-name="{{ resource.resource_name }}"
+                                        title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state small">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <h4>No resources uploaded yet</h4>
+                        <p>Start sharing your study materials</p>
+                        <a href="{{ url_for('resources') }}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-upload"></i> Upload First Resource
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Quick Add Section 
+             <!--
+            <div class="card">
+                <h2><i class="fas fa-plus-circle"></i> Quick Add</h2>
+                <div class="quick-actions">
+                    <a href="{{ url_for('tasks') }}" class="quick-action">
+                        <i class="fas fa-tasks"></i>
+                        <span>Add Task</span>
+                    </a>
+                    <a href="{{ url_for('timetable') }}" class="quick-action">
+                        <i class="fas fa-clock"></i>
+                        <span>Add Schedule</span>
+                    </a>
+                    <a href="{{ url_for('resources') }}" class="quick-action">
+                        <i class="fas fa-share-alt"></i>
+                        <span>Share Resource</span>
+                    </a>
+                </div>
+            </div>
+            -->
+
+
+            <!-- Upcoming Deadlines -->
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-exclamation-circle"></i> Upcoming Deadlines</h2>
+                </div>
+                {% if upcoming_tasks %}
+                    <div class="deadlines-list">
+                        {% for task in upcoming_tasks[:3] %}
+                        <div class="deadline-item {% if task.due_date.date() == now.date() %}due-today{% endif %}">
+                            <div class="deadline-info">
+                                <h4>{{ task.task_name }}</h4>
+                                <span class="deadline-date">
+                                    <i class="fas fa-calendar"></i>
+                                    {{ task.due_date.strftime('%b %d, %H:%M') }}
+                                </span>
+                            </div>
+                            <div class="deadline-urgency {% if task.due_date.date() == now.date() %}urgent{% endif %}">
+                                {% if task.due_date.date() == now.date() %}
+                                    Today
+                                {% else %}
+                                    {{ (task.due_date.date() - now.date()).days }}d
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state small">
+                        <i class="fas fa-check-circle"></i>
+                        <p>No upcoming deadlines</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Author Section -->
+    <div class="author-section">
+        <strong>{{ session['user_name'] }}</strong> • {{ session['user_email'] }} • {{ session['user_course'] }}
+    </div>
+</div>
+
+<script>
+    // Update current date with beautiful formatting
+    function updateCurrentDate() {
+        const now = new Date();
+        const options = { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric', 
+            weekday: 'long' 
+        };
+        const dateString = now.toLocaleDateString('en-US', options);
+        document.getElementById('current-date').textContent = dateString;
+    }
+    
+    updateCurrentDate();
+
+    // Auto-update time every minute
+    setInterval(updateCurrentDate, 60000);
+
+    // Function to open resource modal from dashboard
+    function openResourceModal(resourceId) {
+        fetch(`/get_resource_info/${resourceId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Error loading resource details: ' + data.error);
+                    return;
+                }
+
+                const viewConfirm = confirm(
+                    `Resource: ${data.resource_name}\n` +
+                    `Type: ${data.resource_type}\n` +
+                    `Size: ${data.file_size}\n` +
+                    `Description: ${data.description || 'No description'}\n\n` +
+                    'Would you like to view this resource?'
+                );
+                
+                if (viewConfirm) {
+                    window.open(`/view_resource/${resourceId}`, '_blank');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching resource details:', error);
+                alert('Error loading resource details');
+            });
+    }
+
+    // View Resource functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        // View resource button click handler
+        document.querySelectorAll('.view-resource').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.stopPropagation(); // Prevent triggering the parent click event
+                const resourceId = this.getAttribute('data-resource-id');
+                window.open(`/view_resource/${resourceId}`, '_blank');
+            });
+        });
+
+        // Delete resource functionality with redirect to resources page
+        document.querySelectorAll('.delete-resource-dashboard').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.stopPropagation(); // Prevent triggering the parent click event
+                const resourceId = this.getAttribute('data-resource-id');
+                const resourceName = this.getAttribute('data-resource-name');
+                
+                if (confirm(`Are you sure you want to delete "${resourceName}"?`)) {
+                    // Show loading state
+                    const resourceItem = document.getElementById(`resource-${resourceId}`);
+                    if (resourceItem) {
+                        resourceItem.style.opacity = '0.5';
+                        resourceItem.style.pointerEvents = 'none';
+                    }
+                    
+                    // Delete the resource
+                    fetch(`/delete_resource_dashboard/${resourceId}`)
+                        .then(response => {
+                            if (response.ok) {
+                                // Redirect to resources page after successful deletion
+                                window.location.href = '/resources?deleted=true';
+                            } else {
+                                alert('Error deleting resource');
+                                if (resourceItem) {
+                                    resourceItem.style.opacity = '1';
+                                    resourceItem.style.pointerEvents = 'auto';
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('Error deleting resource');
+                            if (resourceItem) {
+                                resourceItem.style.opacity = '1';
+                                resourceItem.style.pointerEvents = 'auto';
+                            }
+                        });
+                }
+            });
+        });
+
+        // Add smooth animations
+        const cards = document.querySelectorAll('.card, .stat-card');
+        cards.forEach((card, index) => {
+            card.style.animationDelay = `${index * 0.1}s`;
+        });
+
+        // Add file type colors to resource types
+        document.querySelectorAll('.resource-mini-type').forEach(type => {
+            const typeText = type.textContent;
+            type.setAttribute('data-type', typeText);
+        });
+    });
+</script>
+
+<style>
+/* Reduced Welcome Back Panel to 70% */
+.dashboard-header.reduced-size {
+    transform: scale(0.7);
+    transform-origin: top center;
+    margin-bottom: -4rem; /* Compensate for reduced height */
+    position: relative;
+    z-index: 1;
+}
+
+/* Adjust the main content to account for reduced header */
+.dashboard-container {
+    margin-top: -2rem; /* Pull content up to compensate */
+}
+
+/* Uploaded Resources Section in Dashboard */
+.uploaded-resources-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.uploaded-resource-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--bg-light);
+    border-radius: 12px;
+    border-left: 4px solid var(--primary-color);
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+}
+
+.uploaded-resource-item:hover {
+    transform: translateX(5px);
+    box-shadow: var(--shadow-md);
+    border-left-color: var(--accent-color);
+}
+
+.resource-mini-icon {
+    font-size: 1.5rem;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: var(--card-bg);
+    box-shadow: var(--shadow-sm);
+}
+
+.uploaded-resource-item .fa-file-pdf { color: #e74c3c; }
+.uploaded-resource-item .fa-file-word { color: #2b579a; }
+.uploaded-resource-item .fa-file-image { color: #e67e22; }
+.uploaded-resource-item .fa-file-alt { color: #7f8c8d; }
+.uploaded-resource-item .fa-file { color: var(--primary-color); }
+
+.resource-mini-info {
+    flex: 1;
+    cursor: pointer;
+    min-width: 0; /* Allow text truncation */
+}
+
+.resource-mini-info h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: var(--text-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.resource-mini-meta {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.resource-mini-type {
+    font-size: 0.7rem;
+    background: var(--primary-color);
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.resource-mini-size {
+    font-size: 0.7rem;
+    color: var(--text-light);
+    background: var(--bg-white);
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.resource-mini-date {
+    font-size: 0.7rem;
+    color: var(--text-light);
+}
+
+.resource-mini-actions {
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.uploaded-resource-item:hover .resource-mini-actions {
+    opacity: 1;
+}
+
+.resource-mini-actions .btn {
+    padding: 0.4rem 0.6rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+}
+
+/* View button specific styling */
+.view-resource {
+    background: var(--secondary-color) !important;
+    border-color: var(--secondary-color) !important;
+}
+
+.view-resource:hover {
+    background: var(--primary-dark) !important;
+    transform: scale(1.05);
+}
+
+/* File type colors for mini resources */
+.resource-mini-type[data-type="Notes"] { background: #3498db; }
+.resource-mini-type[data-type="Assignment"] { background: #e74c3c; }
+.resource-mini-type[data-type="Book"] { background: #27ae60; }
+.resource-mini-type[data-type="Slide"] { background: #9b59b6; }
+.resource-mini-type[data-type="Question Paper"] { background: #f39c12; }
+.resource-mini-type[data-type="Solution"] { background: #1abc9c; }
+.resource-mini-type[data-type="Other"] { background: #7f8c8d; }
+
+/* Empty state for uploaded resources */
+.empty-state.small {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-light);
+}
+
+.empty-state.small i {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state.small h4 {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-light);
+}
+
+.empty-state.small p {
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+/* Loading state for deletion */
+.uploaded-resource-item.deleting {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Responsive design for uploaded resources */
+@media (max-width: 768px) {
+    .dashboard-header.reduced-size {
+        transform: scale(1); /* Remove scaling on mobile */
+        margin-bottom: 2rem; /* Reset margin */
+    }
+    
+    .dashboard-container {
+        margin-top: 0; /* Reset margin */
+    }
+    
+    .uploaded-resource-item {
+        padding: 0.75rem;
+        gap: 0.75rem;
+    }
+    
+    .resource-mini-meta {
+        gap: 0.5rem;
+    }
+    
+    .resource-mini-info h4 {
+        font-size: 0.85rem;
+    }
+    
+    .resource-mini-type,
+    .resource-mini-size,
+    .resource-mini-date {
+        font-size: 0.65rem;
+    }
+    
+    .resource-mini-actions {
+        opacity: 1; /* Always show actions on mobile */
+    }
+    
+    .resource-mini-actions .btn {
+        padding: 0.35rem 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .uploaded-resource-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    
+    .resource-mini-info {
+        width: 100%;
+    }
+    
+    .resource-mini-actions {
+        align-self: flex-end;
+    }
+}
+</style>
+{% endblock %}
